@@ -17,6 +17,10 @@ class Dragon(object):
         else:
             return chain.from_iterable(map(streamify, generators_or_iterables))
 
+    @staticmethod
+    def of_list(*elements):
+        return Dragon(elements)
+
     def __init__(self, *generators_or_iterables):
         """
         Initialize Dragon objects
@@ -284,6 +288,11 @@ class DictDragon(Dragon):
         return DictDragon(wrap=self.map_items(lambda k, v: (func(k), v)))
 
     def filter_keys(self, func):
+        """
+        Pick dict elements whose keys pass the test
+        :param func: (key -> boolean) function each key will be tested against
+        :return: A DictDragon instance wrapping the filtered stream
+        """
         return DictDragon(wrap=(elem for elem in self if func(elem[0])))
 
     def map_values(self, func):
@@ -295,6 +304,11 @@ class DictDragon(Dragon):
         return DictDragon(wrap=self.map_items(lambda k, v: (k, func(v))))
 
     def filter_values(self, func):
+        """
+        Pick dict elements whose values pass the test
+        :param func: (key -> boolean) function each value will be tested against
+        :return: A DictDragon instance wrapping the filtered stream
+        """
         return DictDragon(wrap=(elem for elem in self if func(elem[1])))
 
     def add_dicts(self, *list_of_dicts):
