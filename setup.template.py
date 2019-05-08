@@ -5,7 +5,7 @@ from os import path
 from io import open
 
 VERSION = "@PACKAGE_VERSION@"
-if re.match("^([0-9]+\.)+[0-9]+$", VERSION) or os.environ.get("BUILD_SNAPSHOT", None):
+if not (re.match("^([0-9]+\.)+[0-9]+(\+[0-9]+\.[0-9a-h]+)?$", VERSION) or os.environ.get("BUILD_SNAPSHOT", None)):
     raise Exception('Invalid version string: "{}"'.format(VERSION))
 
 here = path.abspath(path.dirname(__file__))
