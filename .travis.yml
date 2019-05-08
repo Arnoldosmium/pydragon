@@ -10,7 +10,7 @@ install:
 script:
   - pytest
 before_deploy:
-  - export PACKAGE_VERSION="$(git describe)"
+  - ./render_setup.sh
 deploy:
   provider: pypi
   user: arnoldosmium
