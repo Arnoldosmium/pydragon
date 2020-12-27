@@ -7,7 +7,7 @@ streamer.operator
 The module contains some iterator operator - add operation to an iterator and keep its laziness.
 """
 
-from typing import Generic, TypeVar, Iterator
+from typing import Generic, TypeVar, Iterator, Callable
 
 T = TypeVar('T')
 
@@ -26,3 +26,10 @@ class Deduplicator(Generic[T]):
 
     def __iter__(self) -> Iterator[T]:
         return self
+
+
+def RepeatApply(init, transform: Callable):
+    p = init
+    while True:
+        yield p
+        p = transform(p)

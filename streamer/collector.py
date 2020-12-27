@@ -8,7 +8,8 @@ This module contains the definition and some implementations of `Collector`.
 Similar to `java.util.stream.Collector`s in Java, it packages a set of map-reduce operations.
 """
 from abc import ABC, abstractmethod
-from typing import Iterable, TypeVar, Generic, Callable
+from typing import Iterable, TypeVar, Generic, Callable, Any
+from collections import Counter
 
 T = TypeVar("T")
 A = TypeVar("A")  # Accumulator intermediate
@@ -92,3 +93,31 @@ class OneTimeCollector(ABC, Collector[T, A, R]):
             raise ValueError("One time collectors cannot be reused.")
         self.__has_executed = True
         return super(OneTimeCollector, self).collect(collection)
+
+
+class CountCollector(Collector[T, Any, int]):
+    class _IntPointer:
+        def __init__(self, init: int = 0):
+            self.__v = init
+
+        def acc(self):
+            self.__v += 1
+
+        def __add__(self, other):
+            assert isinstance(other, CountCollector._IntPointer)
+            return self.__class__(self.__v + other.__v)
+
+        def get(self):
+            return self.__v
+
+    def supplier(self) -> _IntPointer:
+        return CountCollector._IntPointer()
+
+    def accumulator(self, partial: _IntPointer, _: T) -> None:
+        partial.acc()
+
+    def combiner(self, partial1: _IntPointer, partial2: _IntPointer) -> _IntPointer:
+        return partial1 + partial2
+
+    def finisher(self, final: _IntPointer) -> int:
+        return final.get()

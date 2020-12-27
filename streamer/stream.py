@@ -9,12 +9,13 @@ The main module with Stream, DictStream implementations
 
 from itertools import chain, islice, dropwhile, takewhile, starmap
 from functools import reduce
-from typing import Callable, Union, Iterator, Iterable, TypeVar, Generic, Dict, Tuple
+from typing import Callable, Union, List, Set, Iterator, Iterable, TypeVar, Generic, Dict, Tuple, Any
 from .util import to_iterator
 from .operator import Deduplicator
+from .collector import Collector, CountCollector
 
 T = TypeVar('T')
-S = TypeVar('S')
+R = TypeVar('R')
 ElementOrIter = Union[Iterable[T], Iterator[T], T]
 
 
@@ -85,7 +86,7 @@ class Stream(Generic[T]):
         """
         return Stream(enumerate(self.__stream))
 
-    def map(self, func: Callable[[T], S]):
+    def map(self, func: Callable[[T], R]):
         """
         Equivalent to builtin map function
         :param func: function each element will be passed to for transformation
@@ -93,7 +94,7 @@ class Stream(Generic[T]):
         """
         return Stream(map(func, self.__stream))
 
-    def map_with_index(self, func: Callable[[int, T], S]):
+    def map_with_index(self, func: Callable[[int, T], R]):
         """
         Iterate through all elements with its index supplied
         :param func: ([int index, element] -> any) function each element and its index will be passed to
@@ -101,7 +102,7 @@ class Stream(Generic[T]):
         """
         return Stream(func(i, elem) for i, elem in enumerate(self.__stream))
 
-    def flat_map(self, func: Callable[[T], S]):
+    def flat_map(self, func: Callable[[T], R]):
         """
         Flattening (once) if any element is a collection or iterator
         :param func: function each current element will be passed to
@@ -137,13 +138,32 @@ class Stream(Generic[T]):
     # Consumer operations
     ###
 
-    def collect(self, collector: Callable):
+    def collect(self, collector: Union[Callable[[Iterator[T]], R], Collector[T, Any, R]]) -> R:
         """
         [Consumer operation] passes the stream to collector
         :param collector: (Stream -> any) function iterates through the stream
         :return: the result after piping stream to collector function
         """
-        return collector(self)
+        if isinstance(collector, Collector):
+            return collector.collect(self)
+        elif callable(collector):
+            return Collector.of(collector).collect(self)
+        else:
+            raise ValueError("Collect seems to be neither a collector nor a callable function.")
+
+    def collect_as_list(self) -> List[T]:
+        """
+        [Consumer operation] convert to a list
+        :return: List
+        """
+        return list(self)
+
+    def collect_as_set(self) -> Set[T]:
+        """
+        [Consumer operation] convert to a set
+        :return: Set
+        """
+        return set(self)
 
     def collect_dict(self, dict_collector: Callable[[Iterator[T]], Dict] = dict):
         """
@@ -196,6 +216,65 @@ class Stream(Generic[T]):
         """
         for i, element in enumerate(self):
             func(i, element)
+
+    def any_match(self, match: Callable[[T], bool]) -> bool:
+        """
+        [Consumer operation] test if any element in the stream passes the predicate test
+        :param match: (element -> bool) function tests each element
+        :return: test result
+        """
+        for item in self.__stream:
+            if match(item):
+                return True
+        return False
+
+    def all_match(self, match: Callable[[T], bool]) -> bool:
+        """
+        [Consumer operation] test if all elements in the stream pass the predicate test
+        :param match: (element -> bool) function tests each element
+        :return: test result
+        """
+        for item in self.__stream:
+            if not match(item):
+                return False
+        return True
+
+    def none_match(self, match: Callable[[T], bool]) -> bool:
+        """
+        [Consumer operation] test if none of elements in the stream pass the predicate test
+        :param match: (element -> bool) function tests each element
+        :return: test result
+        """
+        return not self.any_match(match)
+
+    def count(self) -> int:
+        """
+        [Consumer operation] count total number of elements
+        :return: total number
+        """
+        return self.collect(CountCollector())
+
+    ###
+    # Element extraction method
+    ###
+
+    def find_any(self) -> Union[T, None]:
+        """
+        [Extraction operation] get any one element in the stream
+        :return: Optional[T] - maybe element
+        """
+        try:
+            return next(self)
+        except StopIteration:
+            return None
+
+    def find_first(self) -> Union[T, None]:
+        """
+        [Extraction operation] get first element in the stream
+        The same as find_any in single thread stream
+        :return: Optional[T] - maybe element
+        """
+        return self.find_any()
 
     ###
     # Element removal Operations
@@ -286,7 +365,7 @@ class Stream(Generic[T]):
 
 
 
-    def stream_transform(self, stream_func: Callable[[Iterator[T]], Iterator[S]]):
+    def stream_transform(self, stream_func: Callable[[Iterator[T]], Iterator[R]]):
         """
         Run arbitrary stream transformation
         :param stream_func: (stream -> stream) stream transformation function
@@ -319,7 +398,7 @@ class DictStream(Stream[Tuple[K, V]]):
                 raise ValueError("No other iterator source should be provided when wrapping an iterator")
             super(DictStream, self).__init__(wrap)
 
-    def map_items(self, func: Callable[[K, V], S]):
+    def map_items(self, func: Callable[[K, V], R]):
         """
         Pass key and item respectively to the map function
         :param func: (key, value -> any) item map function
@@ -327,7 +406,7 @@ class DictStream(Stream[Tuple[K, V]]):
         """
         return self.stream_transform(lambda stream: starmap(func, stream))
 
-    def map_key_values(self, key_map: Callable[[K], T], value_map: Callable[[V], S]):
+    def map_key_values(self, key_map: Callable[[K], T], value_map: Callable[[V], R]):
         """
         Pass key and item respectively to the map function
         :param key_map: (key -> key_like) key map function
@@ -336,7 +415,7 @@ class DictStream(Stream[Tuple[K, V]]):
         """
         return DictStream(wrap=((key_map(k), value_map(v)) for k, v in self))
 
-    def map_keys(self, func: Callable[[K], S]):
+    def map_keys(self, func: Callable[[K], R]):
         """
         Apply the map function only to the keys
         :param func: (key -> key_like) key map function
@@ -352,7 +431,7 @@ class DictStream(Stream[Tuple[K, V]]):
         """
         return DictStream(wrap=((k, v) for k, v in self if func(k)))
 
-    def map_values(self, func: Callable[[V], S]):
+    def map_values(self, func: Callable[[V], R]):
         """
         Apply the map function only to the values
         :param func: (value -> any) value map function
