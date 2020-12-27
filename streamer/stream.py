@@ -307,7 +307,7 @@ class DictStream(Stream[Tuple[K, V]]):
         :param value_map: (value -> any) value map function
         :return: A Stream wrapping resulting stream
         """
-        return DictStream(wrap=((key_map(k), value_map(v) for k, v in self)))
+        return DictStream(wrap=((key_map(k), value_map(v)) for k, v in self))
 
     def map_keys(self, func: Callable[[K], S]):
         """
