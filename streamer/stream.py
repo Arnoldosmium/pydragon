@@ -1,3 +1,12 @@
+# -*- coding: utf-8 -*-
+
+"""
+streamer.stream
+---
+
+The main module with Stream, DictStream implementations
+"""
+
 from itertools import chain, islice, dropwhile, takewhile, starmap
 from functools import reduce
 from typing import Callable, Union, Iterator, Iterable, TypeVar, Generic, Dict, Tuple
@@ -40,6 +49,10 @@ class Stream(Generic[T]):
     # to iterator
     def __iter__(self) -> Iterator[T]:
         return self.__stream
+
+    ###
+    # Common operations
+    ###
 
     def add(self, *generators_or_iterables: ElementOrIter):
         """
@@ -120,6 +133,10 @@ class Stream(Generic[T]):
         """
         return self.exclude(func)
 
+    ###
+    # Consumer operations
+    ###
+
     def collect(self, collector: Callable):
         """
         [Consumer operation] passes the stream to collector
@@ -128,15 +145,15 @@ class Stream(Generic[T]):
         """
         return collector(self)
 
-    def collect_dict(self, dict_collector: Callable = dict):
+    def collect_dict(self, dict_collector: Callable[[Iterator[T]], Dict] = dict):
         """
-        [Consumer operation] passes the stream to dict collector
-        :param dict_collector: (Stream<I extends map.entry> -> D extends dict) function iterates through the stream
+        [Consumer operation] form a map/dict with the 1st element from each stream candidate as keys and rest as values
+        :param dict_collector: (Stream<I extends map.entry> -> Dict<K, V>) function iterates through the stream
         :return: the result after piping stream to dict collector function
         """
         return dict_collector((elem[0], elem[1] if len(elem) == 2 else elem[1:]) for elem in self.__stream)
 
-    def build_dict(self, dict_collector: Callable = dict):
+    def build_dict(self, dict_collector: Callable[[Iterator[T]], Dict] = dict):
         """
         (alias of collect_dict) [Consumer operation] passes the stream to dict collector
         :param dict_collector: (stream<I extends item> -> D extends dict) function iterates through the item stream
@@ -144,7 +161,7 @@ class Stream(Generic[T]):
         """
         return self.collect_dict(dict_collector)
 
-    def collect_as_map(self, map_collector: Callable = dict):
+    def collect_as_map(self, map_collector: Callable[[Iterator[T]], Dict] = dict):
         """
         (alias of collect_dict) [Consumer operation] passes the stream to dict collector
         :param map_collector: (stream<I extends item> -> D extends dict) function iterates through the item stream
@@ -180,32 +197,16 @@ class Stream(Generic[T]):
         for i, element in enumerate(self):
             func(i, element)
 
+    ###
+    # Element removal Operations
+    ###
+
     def distinct(self):
         """
         Gives stream with distinct elements
         :return: stream with distinct elements
         """
         return Stream(Deduplicator(self.__stream))
-
-    def max(self, key=None):
-        """
-        [Consumer operation] grab the max value in the stream
-        :param key: (element -> C extends comparable) optional evaluator to compare elements
-        :return: the max element in the stream
-        """
-        if key is None:
-            return max(self)
-        return max(self, key=key)
-
-    def min(self, key=None):
-        """
-        [Consumer operation] grab the min value in the stream
-        :param key: (element -> C extends comparable) optional evaluator to compare elements
-        :return: the min element in the stream
-        """
-        if key is None:
-            return min(self)
-        return min(self, key=key)
 
     def limit(self, num: int):
         """
@@ -259,7 +260,33 @@ class Stream(Generic[T]):
         """
         return self.dropwhile(lambda x: not func(x))
 
-    def stream_transform(self, stream_func: Callable):
+    ###
+    # Advanced operations
+    ###
+
+    def max(self, key=None):
+        """
+        [Consumer operation] grab the max value in the stream
+        :param key: (element -> C extends comparable) optional evaluator to compare elements
+        :return: the max element in the stream
+        """
+        if key is None:
+            return max(self)
+        return max(self, key=key)
+
+    def min(self, key=None):
+        """
+        [Consumer operation] grab the min value in the stream
+        :param key: (element -> C extends comparable) optional evaluator to compare elements
+        :return: the min element in the stream
+        """
+        if key is None:
+            return min(self)
+        return min(self, key=key)
+
+
+
+    def stream_transform(self, stream_func: Callable[[Iterator[T]], Iterator[S]]):
         """
         Run arbitrary stream transformation
         :param stream_func: (stream -> stream) stream transformation function
