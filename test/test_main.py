@@ -1,5 +1,5 @@
 from streamer import Stream
-from streamer.util import identity
+from .util import identity
 
 
 def test_basic():
