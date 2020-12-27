@@ -32,16 +32,16 @@ def test_basic():
     assert s5 == (list(range(0, 10, 2)), list(range(0, 10, 4)))
 
     s6dict = {}
-    Stream("abcd".split("")) \
+    Stream(list("abcd")) \
         .foreach_index(lambda i, ch: s6dict.__setitem__(i, ch))
-    s6dict2 = Stream("abcd".split("")) \
+    s6dict2 = Stream(list("abcd")) \
         .map_with_index(lambda i, ch: (i, ch)) \
         .collect_dict()
     assert s6dict == dict(enumerate("abcd")) == s6dict2
 
 
-def test_string_not_streamed():
-    assert Stream("a string").collect(list) == ["a string"]
+def test_string_is_streamed():
+    assert Stream("a string").collect(list) == list("a string")
 
 
 def test_distinct():
