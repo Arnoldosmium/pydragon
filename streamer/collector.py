@@ -77,7 +77,7 @@ class Collector(Generic[T, A, R], metaclass=ABCMeta):
             def collect(self, collection: Iterable[T]) -> R:
                 return func(collection)
 
-        return _SimpleCollector
+        return _SimpleCollector()
 
 
 class OneTimeCollector(Collector[T, A, R], metaclass=ABCMeta):
