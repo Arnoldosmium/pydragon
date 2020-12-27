@@ -74,6 +74,15 @@ class Collector(Generic[T, A, R], metaclass=ABCMeta):
         class _SimpleCollector(Collector[T, R, R]):
             SIMPLE_FLAG = True
 
+            def supplier(self) -> A:
+                raise ValueError("Simple collector should never use `supplier`")
+
+            def accumulator(self, acc: A, elem: T) -> None:
+                raise ValueError("Simple collector should never use `accumulator`")
+
+            def combiner(self, acc1: A, acc2: A) -> A:
+                raise ValueError("Simple collector should never use `combiner`")
+
             def collect(self, collection: Iterable[T]) -> R:
                 return func(collection)
 
