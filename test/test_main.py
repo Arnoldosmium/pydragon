@@ -126,7 +126,7 @@ def test_conditional_cutoff_and_skip():
     s3 = Stream(RepeatApply(1, lambda x: x + 1)) \
         .takewhile(lambda x: x % 10) \
         .collect_as_list()
-    assert s3 == range(1, 10)
+    assert s3 == list(range(1, 10))
 
 
 def test_static_of_operation():
