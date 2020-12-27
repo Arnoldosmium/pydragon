@@ -7,7 +7,7 @@ streamer.collector
 This module contains the definition and some implementations of `Collector`.
 Similar to `java.util.stream.Collector`s in Java, it packages a set of map-reduce operations.
 """
-from abc import ABC, abstractmethod
+from abc import ABCMeta, abstractmethod
 from typing import Iterable, TypeVar, Generic, Callable, Any
 from collections import Counter
 
@@ -16,7 +16,7 @@ A = TypeVar("A")  # Accumulator intermediate
 R = TypeVar("R")  # Reduction result
 
 
-class Collector(ABC, Generic[T, A, R]):
+class Collector(Generic[T, A, R], metaclass=ABCMeta):
     SIMPLE_FLAG = False
 
     @abstractmethod
@@ -80,7 +80,7 @@ class Collector(ABC, Generic[T, A, R]):
         return _SimpleCollector
 
 
-class OneTimeCollector(ABC, Collector[T, A, R]):
+class OneTimeCollector(Collector[T, A, R], metaclass=ABCMeta):
 
     def __init__(self):
         self.__has_executed = False
