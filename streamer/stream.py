@@ -1,6 +1,6 @@
 from itertools import chain, islice, dropwhile, takewhile, starmap
 from functools import reduce
-from typing import Callable, Union, Iterator, Iterable, TypeVar, Generic, Any
+from typing import Callable, Union, Iterator, Iterable, TypeVar, Generic, Dict, Tuple
 from .util import to_iterator
 from .operator import Deduplicator
 
@@ -164,7 +164,7 @@ class Stream(Generic[T]):
         else:
             return reduce(reducer, self.__stream)
 
-    def foreach(self, func: Callable[[T], None]):
+    def foreach(self, func: Callable[[T], None]) -> None:
         """
         [Consumer operation] passes the stream to func
         :param func: (element -> void) function runs on each element
@@ -172,7 +172,7 @@ class Stream(Generic[T]):
         for element in self:
             func(element)
 
-    def foreach_index(self, func: Callable[[int, T], None]):
+    def foreach_index(self, func: Callable[[int, T], None]) -> None:
         """
         [Consumer operation] passes the stream to func
         :param func: (element -> void) function runs on each element
@@ -268,27 +268,31 @@ class Stream(Generic[T]):
         return Stream(stream_func(self.__stream))
 
 
-class DictStream(Stream):
+K = TypeVar('K')
+V = TypeVar('V')
 
-    def __init__(self, *list_of_dicts, **kwargs):
+
+class DictStream(Stream[Tuple[K, V]]):
+
+    def __init__(self, *list_of_dicts: Dict[K, V], **kwargs):
         """
-        The DictStream / DictStream class is the chainable wrapper class around any generators / iterators of dict item
+        The MapStream / DictStream class is the chainable wrapper class around any generators / iterators of dict item
         like elements
         :param list_of_dicts: a list of dict-like elements
         :param wrap: <OR> wrap a stream with DictStream class
         """
-        wrap = kwargs.get("wrap")
+        wrap: Iterator[Tuple[K, V]] = kwargs.get("wrap")
         if wrap is None:
             super(DictStream, self).__init__(*(
-                ((key, aDict[key]) for key in aDict)
-                for aDict in list_of_dicts
+                ((key, dct[key]) for key in dct)
+                for dct in list_of_dicts
             ))
         else:
             if len(list_of_dicts):
                 raise ValueError("No other iterator source should be provided when wrapping an iterator")
             super(DictStream, self).__init__(wrap)
 
-    def map_items(self, func):
+    def map_items(self, func: Callable[[K, V], S]):
         """
         Pass key and item respectively to the map function
         :param func: (key, value -> any) item map function
@@ -296,7 +300,16 @@ class DictStream(Stream):
         """
         return self.stream_transform(lambda stream: starmap(func, stream))
 
-    def map_keys(self, func):
+    def map_key_values(self, key_map: Callable[[K], T], value_map: Callable[[V], S]):
+        """
+        Pass key and item respectively to the map function
+        :param key_map: (key -> key_like) key map function
+        :param value_map: (value -> any) value map function
+        :return: A Stream wrapping resulting stream
+        """
+        return DictStream(wrap=((key_map(k), value_map(v) for k, v in self)))
+
+    def map_keys(self, func: Callable[[K], S]):
         """
         Apply the map function only to the keys
         :param func: (key -> key_like) key map function
@@ -304,15 +317,15 @@ class DictStream(Stream):
         """
         return DictStream(wrap=self.map_items(lambda k, v: (func(k), v)))
 
-    def filter_keys(self, func):
+    def filter_keys(self, func: Callable[[K], bool]):
         """
         Pick dict elements whose keys pass the test
         :param func: (key -> boolean) function each key will be tested against
         :return: A DictStream instance wrapping the filtered stream
         """
-        return DictStream(wrap=(elem for elem in self if func(elem[0])))
+        return DictStream(wrap=((k, v) for k, v in self if func(k)))
 
-    def map_values(self, func):
+    def map_values(self, func: Callable[[V], S]):
         """
         Apply the map function only to the values
         :param func: (value -> any) value map function
@@ -320,29 +333,34 @@ class DictStream(Stream):
         """
         return DictStream(wrap=self.map_items(lambda k, v: (k, func(v))))
 
-    def filter_values(self, func):
+    def filter_values(self, func: Callable[[V], bool]):
         """
         Pick dict elements whose values pass the test
         :param func: (key -> boolean) function each value will be tested against
         :return: A DictStream instance wrapping the filtered stream
         """
-        return DictStream(wrap=(elem for elem in self if func(elem[1])))
+        return DictStream(wrap=((k, v) for k, v in self if func(v)))
 
-    def add_dicts(self, *list_of_dicts):
+    def add_dicts(self, *list_of_dicts: Dict[K, V]):
         """
-        Add in several dicts
+        Append with several dicts, keys of which may override the previous keys.
         :param list_of_dicts: a list of dicts to merge in
         :return: A DictStream with all items
         """
         return DictStream(wrap=self.add(DictStream(*list_of_dicts)))
 
-    def with_overrides(self, *list_of_dicts):
+    def with_overrides(self, *list_of_dicts: Dict[K, V], **literal_overrides: V):
         """
-        (alias of add_dicts) Add in several dicts
+        Append with several dicts, keys of which may override the previous keys. Literal overrides may be provided.
         :param list_of_dicts: a list of dicts to merge in
+        :param literal_overrides: key / value to merge in
         :return: A DictStream with all items (overrides on collections
         """
-        return self.add_dicts(*list_of_dicts)
+        if len(literal_overrides.keys()):
+            assert len(list_of_dicts) == 0, "Cannot merge in both dicts and literal overrides. Try split up."
+            return self.add_dicts(literal_overrides)
+        else:
+            return self.add_dicts(*list_of_dicts)
 
     @staticmethod
     def merge_dicts(*dicts_to_merge, **kwargs):
