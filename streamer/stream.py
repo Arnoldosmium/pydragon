@@ -363,8 +363,6 @@ class Stream(Generic[T]):
             return min(self)
         return min(self, key=key)
 
-
-
     def stream_transform(self, stream_func: Callable[[Iterator[T]], Iterator[R]]):
         """
         Run arbitrary stream transformation
@@ -380,14 +378,13 @@ V = TypeVar('V')
 
 class DictStream(Stream[Tuple[K, V]]):
 
-    def __init__(self, *list_of_dicts: Dict[K, V], **kwargs):
+    def __init__(self, *list_of_dicts: Dict[K, V], wrap: Union[Iterator[Tuple[K, V]], None] = None):
         """
         The MapStream / DictStream class is the chainable wrapper class around any generators / iterators of dict item
         like elements
         :param list_of_dicts: a list of dict-like elements
         :param wrap: <OR> wrap a stream with DictStream class
         """
-        wrap: Iterator[Tuple[K, V]] = kwargs.get("wrap")
         if wrap is None:
             super(DictStream, self).__init__(*(
                 ((key, dct[key]) for key in dct)
@@ -469,12 +466,11 @@ class DictStream(Stream[Tuple[K, V]]):
             return self.add_dicts(*list_of_dicts)
 
     @staticmethod
-    def merge_dicts(*dicts_to_merge, **kwargs):
+    def merge_dicts(*dicts_to_merge, dict_collector: Callable[[Iterator[Tuple[K, V]]], Dict[K, V]] = dict):
         """
         Static method to help merge dicts
         :param dicts_to_merge: a list of dicts; following dicts override previous dicts
         :param dict_collector: default built-in dict
         :return: A merged dict
         """
-        dict_collector = kwargs.get("dict_collector", dict)
         return DictStream(*dicts_to_merge).build_dict(dict_collector)
