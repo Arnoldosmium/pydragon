@@ -147,6 +147,9 @@ class Stream(Generic[T]):
         :param exclusion: items to exclude
         :return: New stream with exclusion filtered
         """
+        if len(exclusion) == 0:
+            return self
+
         all_exclusions = set(exclusion)
         return Stream(elem for elem in self.__stream if elem not in all_exclusions)
 
@@ -203,7 +206,7 @@ class Stream(Generic[T]):
         :param dict_collector: (Stream<I extends map.entry> -> Dict<K, V>) function iterates through the stream
         :return: the result after piping stream to dict collector function
         """
-        return dict_collector((elem[0], elem[1] if len(elem) == 2 else elem[1:]) for elem in self.__stream)
+        return dict_collector(self.wrap_as_dict_stream())
 
     def build_dict(self, dict_collector: Callable[[Iterator[T]], Dict] = dict):
         """
@@ -227,6 +230,7 @@ class Stream(Generic[T]):
         :param reducer: (T extends any, element -> T) function takes each item and produce an (aggregated) value
         :param initial_value: (T) optional value, served as the starting value.
         :return: the result after reducing the stream
+        TODO: short circuitable reduction
         """
         if initial_value is not None:
             return reduce(reducer, self.__stream, initial_value)
@@ -425,11 +429,28 @@ class Stream(Generic[T]):
 
     def intersperse(self, delimiter: T):
         """
-        A new stream in which the delimiter is inserted in between every adjacent elements.
+        Creates a new stream in which the delimiter is inserted in between every adjacent elements.
         :param delimiter: same kind of existing elements
         :return: a new stream
         """
         return Stream(Inserter(self, delimiter))
+
+    def cross(self, elements: Iterable[R]) -> Iterator[Tuple[T, R]]:
+        """
+        Creates a new stream contain every pair of values and the cross elements.
+        :param elements: for cross product
+        :return: a new stream
+        """
+        frozen_elements = frozenset(elements)
+        return Stream((item, elem) for item in self.__stream for elem in frozen_elements)
+
+    def cross_result_of(self, generate: Callable[[T], Iterator[R]]) -> Iterator[Tuple[T, R]]:
+        """
+        Creates a new stream contain every pair of values and the results of generate function.
+        :param generate: generator function
+        :return: a new stream
+        """
+        return Stream((item, value) for item in self.__stream for value in generate(item))
 
     def stream_transform(self, stream_func: Callable[[Iterator[T]], Iterator[R]]):
         """
@@ -438,6 +459,14 @@ class Stream(Generic[T]):
         :return: A Stream with processed stream
         """
         return Stream(stream_func(self.__stream))
+
+    def wrap_as_dict_stream(self):
+        """
+        Try box up current stream as a dict stream. Use at your own risk if the stream content is not in a format of two
+        element tuple.
+        :return: DictStream
+        """
+        return DictStream(wrap=((elem[0], elem[1] if len(elem) == 2 else elem[1:]) for elem in self.__stream))
 
 
 K = TypeVar('K')
