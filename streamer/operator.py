@@ -7,7 +7,7 @@ streamer.operator
 The module contains some iterator operator - add operation to an iterator and keep its laziness.
 """
 
-from typing import Generic, TypeVar, Iterator, Callable, Union, Any
+from typing import Generic, TypeVar, Iterator, Callable, Union, Any, Tuple
 from collections import Counter
 
 T = TypeVar('T')
@@ -72,6 +72,29 @@ class Inserter(Generic[T]):
             return nxt
         else:
             return self.__delim
+
+    def __iter__(self) -> Iterator[T]:
+        return self
+
+
+class PairUp(Generic[T]):
+    """
+    An iterator as stream operator for generating adjacent pairs.
+    It yields elements lazily.
+    """
+
+    def __init__(self, stream: Iterator[T]):
+        self.__stream = stream
+        self.__turn = 0
+        self.__prev = None
+
+    def __next__(self) -> Tuple[T, T]:
+        if self.__prev is None:    # initial condition
+            self.__prev = next(self.__stream)
+        curr = next(self.__stream)
+        pair = (self.__prev, curr)
+        self.__prev = curr
+        return pair
 
     def __iter__(self) -> Iterator[T]:
         return self

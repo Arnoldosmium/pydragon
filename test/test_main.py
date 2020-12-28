@@ -201,3 +201,19 @@ def test_intersperse():
 
     assert Stream([]).intersperse("any").collect("".join) == ""
     assert Stream("1").intersperse("great").collect("".join) == "1"
+
+
+def test_cross_function():
+    assert Stream(range(10)) \
+        .cross([1, 2]) \
+        .collect_as_list() == Stream(range(10)) \
+        .cross_result_of(lambda x: [1, 2]) \
+        .collect_as_list() == [(x, y) for x in range(10) for y in [1, 2]]
+
+
+def test_pair_up():
+    assert Stream(range(10)).map_pairs(lambda pair: pair[0] - pair[1]).collect_as_set() == {-1}
+
+    s = set()
+    Stream(range(10)).for_pairs(s.add)
+    assert s == {(x, x + 1) for x in range(9)}

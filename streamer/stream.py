@@ -11,7 +11,7 @@ from itertools import chain, islice, dropwhile, takewhile, starmap
 from functools import reduce
 from typing import Callable, Union, List, Set, Iterator, Iterable, TypeVar, Generic, Dict, Tuple, Any
 from .util import to_iterator
-from .operator import Deduplicator, Inserter
+from .operator import Deduplicator, Inserter, PairUp
 from .collector import Collector, CountCollector
 
 T = TypeVar('T')
@@ -305,7 +305,7 @@ class Stream(Generic[T]):
 
     def sorted(self, key: Union[Callable[[T], Any], None] = None, reverse: bool = False):
         """
-        [Terminal operation] effectively collects all element for comparison and sorting for a sorted stream
+        [Near terminal operation] effectively collects all element for comparison and sorting for a sorted stream
         :param: key - optional comparison method
         :param: reverse - if the order of sort should be reversed (decreasing order)
         :return: A sorted stream
@@ -313,6 +313,14 @@ class Stream(Generic[T]):
         TODO: parallel implementation
         """
         return Stream(sorted(self, key=key, reverse=reverse))
+
+    def for_pairs(self, func: Callable[[Tuple[T, T]], None]) -> None:
+        """
+        [Terminal operation] apply function to every adjacent pair
+        :param: func - function applying on all adjacent pairs
+        """
+        for pair in PairUp(self.__stream):
+            func(pair)
 
     ###
     # Element extraction method
@@ -451,6 +459,13 @@ class Stream(Generic[T]):
         :return: a new stream
         """
         return Stream((item, value) for item in self.__stream for value in generate(item))
+
+    def map_pairs(self, func: Callable[[Tuple[T, T]], R]):
+        """
+        map to new item on every adjacent pair
+        :param: func - mapping function applying on all adjacent pairs
+        """
+        return Stream(func(pair) for pair in PairUp(self.__stream))
 
     def stream_transform(self, stream_func: Callable[[Iterator[T]], Iterator[R]]):
         """
