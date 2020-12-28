@@ -23,7 +23,7 @@ class Stream(Generic[T]):
     """
     The Stream class is the chainable wrapper class around any generators / iterators
     Generators and iterators are merged together, and the sequence is preserved - the same at creation time.
-    No evaluation will actually happen unless a consumer operation is executed.
+    No evaluation will actually happen unless a Terminal operation is executed.
     """
 
     @staticmethod
@@ -167,12 +167,12 @@ class Stream(Generic[T]):
         return Stream((maybe_elem,), self)
 
     ###
-    # Consumer operations
+    # Terminal operations
     ###
 
     def collect(self, collector: Union[Callable[[Iterator[T]], R], Collector[T, Any, R]]) -> R:
         """
-        [Consumer operation] passes the stream to collector
+        [Terminal operation] passes the stream to collector
         :param collector: (Stream -> any) function iterates through the stream
         :return: the result after piping stream to collector function
         """
@@ -185,21 +185,21 @@ class Stream(Generic[T]):
 
     def collect_as_list(self) -> List[T]:
         """
-        [Consumer operation] convert to a list
+        [Terminal operation] convert to a list
         :return: List
         """
         return list(self)
 
     def collect_as_set(self) -> Set[T]:
         """
-        [Consumer operation] convert to a set
+        [Terminal operation] convert to a set
         :return: Set
         """
         return set(self)
 
     def collect_dict(self, dict_collector: Callable[[Iterator[T]], Dict] = dict):
         """
-        [Consumer operation] form a map/dict with the 1st element from each stream candidate as keys and rest as values
+        [Terminal operation] form a map/dict with the 1st element from each stream candidate as keys and rest as values
         :param dict_collector: (Stream<I extends map.entry> -> Dict<K, V>) function iterates through the stream
         :return: the result after piping stream to dict collector function
         """
@@ -207,7 +207,7 @@ class Stream(Generic[T]):
 
     def build_dict(self, dict_collector: Callable[[Iterator[T]], Dict] = dict):
         """
-        (alias of collect_dict) [Consumer operation] passes the stream to dict collector
+        (alias of collect_dict) [Terminal operation] passes the stream to dict collector
         :param dict_collector: (stream<I extends item> -> D extends dict) function iterates through the item stream
         :return: the result after piping stream to dict collector function
         """
@@ -215,7 +215,7 @@ class Stream(Generic[T]):
 
     def collect_as_map(self, map_collector: Callable[[Iterator[T]], Dict] = dict):
         """
-        (alias of collect_dict) [Consumer operation] passes the stream to dict collector
+        (alias of collect_dict) [Terminal operation] passes the stream to dict collector
         :param map_collector: (stream<I extends item> -> D extends dict) function iterates through the item stream
         :return: the result after piping stream to dict collector function
         """
@@ -223,7 +223,7 @@ class Stream(Generic[T]):
 
     def reduce(self, reducer: Callable[[R, T], R], initial_value: Union[R, None] = None):
         """
-        [Consumer operation] equivalent to functool reduce. Passes the stream to reducer
+        [Terminal operation] equivalent to functool reduce. Passes the stream to reducer
         :param reducer: (T extends any, element -> T) function takes each item and produce an (aggregated) value
         :param initial_value: (T) optional value, served as the starting value.
         :return: the result after reducing the stream
@@ -235,7 +235,7 @@ class Stream(Generic[T]):
 
     def reduce_right(self, reducer: Callable[[R, T], R], initial_value: Union[R, None] = None) -> R:
         """
-        [Consumer operation] equivalent to functool reduce. Passes the stream in reverse order to reducer
+        [Terminal operation] equivalent to functool reduce. Passes the stream in reverse order to reducer
         :param reducer: (R result, T element -> T) function takes each item and produce an (aggregated) value
         :param initial_value: (R) optional value, served as the starting value.
         :return: R - the result after reducing the stream
@@ -248,7 +248,7 @@ class Stream(Generic[T]):
 
     def foreach(self, func: Callable[[T], None]) -> None:
         """
-        [Consumer operation] passes the stream to func
+        [Terminal operation] passes the stream to func
         :param func: (element -> void) function runs on each element
         """
         for element in self:
@@ -256,7 +256,7 @@ class Stream(Generic[T]):
 
     def foreach_index(self, func: Callable[[int, T], None]) -> None:
         """
-        [Consumer operation] passes the stream to func
+        [Terminal operation] passes the stream to func
         :param func: (element -> void) function runs on each element
         """
         for i, element in enumerate(self):
@@ -264,7 +264,7 @@ class Stream(Generic[T]):
 
     def any_match(self, match: Callable[[T], bool]) -> bool:
         """
-        [Consumer operation] test if any element in the stream passes the predicate test
+        [Terminal operation] test if any element in the stream passes the predicate test
         :param match: (element -> bool) function tests each element
         :return: test result
         """
@@ -275,7 +275,7 @@ class Stream(Generic[T]):
 
     def all_match(self, match: Callable[[T], bool]) -> bool:
         """
-        [Consumer operation] test if all elements in the stream pass the predicate test
+        [Terminal operation] test if all elements in the stream pass the predicate test
         :param match: (element -> bool) function tests each element
         :return: test result
         """
@@ -286,7 +286,7 @@ class Stream(Generic[T]):
 
     def none_match(self, match: Callable[[T], bool]) -> bool:
         """
-        [Consumer operation] test if none of elements in the stream pass the predicate test
+        [Terminal operation] test if none of elements in the stream pass the predicate test
         :param match: (element -> bool) function tests each element
         :return: test result
         """
@@ -294,14 +294,14 @@ class Stream(Generic[T]):
 
     def count(self) -> int:
         """
-        [Consumer operation] count total number of elements
+        [Terminal operation] count total number of elements
         :return: total number
         """
         return self.collect(CountCollector())
 
     def sorted(self, key: Union[Callable[[T], Any], None] = None, reverse: bool = False):
         """
-        [Consumer operation] effectively collects all element for comparison and sorting for a sorted stream
+        [Terminal operation] effectively collects all element for comparison and sorting for a sorted stream
         :param: key - optional comparison method
         :param: reverse - if the order of sort should be reversed (decreasing order)
         :return: A sorted stream
@@ -316,7 +316,7 @@ class Stream(Generic[T]):
 
     def find_any(self) -> Union[T, None]:
         """
-        [Extraction operation] get any one element in the stream
+        [Terminal operation] get any one element in the stream
         :return: Optional[T] - maybe element
         """
         try:
@@ -326,7 +326,7 @@ class Stream(Generic[T]):
 
     def find_first(self) -> Union[T, None]:
         """
-        [Extraction operation] get first element in the stream
+        [Terminal operation] get first element in the stream
         The same as find_any in single thread stream
         :return: Optional[T] - maybe element
         """
@@ -405,7 +405,7 @@ class Stream(Generic[T]):
 
     def max(self, key: Union[Callable[[T], Any], None] = None):
         """
-        [Consumer operation] grab the max value in the stream
+        [Terminal operation] grab the max value in the stream
         :param key: (element -> C extends comparable) optional evaluator to compare elements
         :return: the max element in the stream
         """
@@ -415,7 +415,7 @@ class Stream(Generic[T]):
 
     def min(self, key: Union[Callable[[T], Any], None] = None):
         """
-        [Consumer operation] grab the min value in the stream
+        [Terminal operation] grab the min value in the stream
         :param key: (element -> C extends comparable) optional evaluator to compare elements
         :return: the min element in the stream
         """
