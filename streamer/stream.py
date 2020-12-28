@@ -221,7 +221,7 @@ class Stream(Generic[T]):
         """
         return self.collect_dict(map_collector)
 
-    def reduce(self, reducer: Callable, initial_value: Union[T, None] = None):
+    def reduce(self, reducer: Callable[[R, T], R], initial_value: Union[R, None] = None):
         """
         [Consumer operation] equivalent to functool reduce. Passes the stream to reducer
         :param reducer: (T extends any, element -> T) function takes each item and produce an (aggregated) value
@@ -232,6 +232,19 @@ class Stream(Generic[T]):
             return reduce(reducer, self.__stream, initial_value)
         else:
             return reduce(reducer, self.__stream)
+
+    def reduce_right(self, reducer: Callable[[R, T], R], initial_value: Union[R, None] = None):
+        """
+        [Consumer operation] equivalent to functool reduce. Passes the stream in reverse order to reducer
+        :param reducer: (T extends any, element -> T) function takes each item and produce an (aggregated) value
+        :param initial_value: (T) optional value, served as the starting value.
+        :return: the result after reducing the stream
+        """
+        reversed_seq = list(self.__stream)[::-1]
+        if initial_value is not None:
+            return reduce(reducer, reversed_seq, initial_value)
+        else:
+            return reduce(reducer, reversed_seq)
 
     def foreach(self, func: Callable[[T], None]) -> None:
         """
