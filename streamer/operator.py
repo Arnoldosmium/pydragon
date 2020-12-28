@@ -14,6 +14,10 @@ T = TypeVar('T')
 
 
 class Deduplicator(Generic[T]):
+    """
+    An iterator as stream operator for deduplication.
+    It yields distinct elements that fulfill requirements lazily.
+    """
 
     def __init__(self, stream: Iterator[T], *, more_than: int = 1, key: Union[Callable[[T], Any], None] = None):
         self.__appeared = Counter()
@@ -42,8 +46,15 @@ class Deduplicator(Generic[T]):
     def __iter__(self) -> Iterator[T]:
         return self
 
+    def key_stats(self):
+        return dict(self.__appeared)
+
 
 class Inserter(Generic[T]):
+    """
+    An iterator as stream operator for inserting delimiter.
+    It yields elements lazily.
+    """
 
     def __init__(self, stream: Iterator[T], delimiter: T):
         self.__stream = stream
