@@ -134,6 +134,22 @@ class Stream(Generic[T]):
         """
         return self.exclude(func)
 
+    def peek(self, func: Callable[[T], None], raise_on_error: bool = False):
+        """
+        Run function on the first element without altering or consuming it.
+        :param func: function to run on first element
+        :param raise_on_error: flag to enforce raising no element error
+        :return: Effectively same stream
+        """
+        maybe_elem = self.find_first()
+        if maybe_elem is None:
+            if raise_on_error:
+                raise ValueError("The stream is empty, cannot apply `peek` to it")
+            return self
+        else:
+            func(maybe_elem)
+        return Stream((maybe_elem,), self)
+
     ###
     # Consumer operations
     ###
@@ -254,6 +270,17 @@ class Stream(Generic[T]):
         """
         return self.collect(CountCollector())
 
+    def sorted(self, key: Union[Callable[[T], Any], None] = None, reverse: bool = False):
+        """
+        [Consumer operation] effectively collects all element for comparison and sorting for a sorted stream
+        :param: key - optional comparison method
+        :param: reverse - if the order of sort should be reversed (decreasing order)
+        :return: A sorted stream
+        TODO: stream sort condition marker
+        TODO: parallel implementation
+        """
+        return Stream(sorted(self, key=key, reverse=reverse))
+
     ###
     # Element extraction method
     ###
@@ -284,6 +311,7 @@ class Stream(Generic[T]):
         """
         Gives stream with distinct elements
         :return: stream with distinct elements
+        TODO: stream distinct condition marker
         """
         return Stream(Deduplicator(self.__stream))
 
@@ -343,7 +371,7 @@ class Stream(Generic[T]):
     # Advanced operations
     ###
 
-    def max(self, key=None):
+    def max(self, key: Union[Callable[[T], Any], None]=None):
         """
         [Consumer operation] grab the max value in the stream
         :param key: (element -> C extends comparable) optional evaluator to compare elements
@@ -353,7 +381,7 @@ class Stream(Generic[T]):
             return max(self)
         return max(self, key=key)
 
-    def min(self, key=None):
+    def min(self, key: Union[Callable[[T], Any], None]=None):
         """
         [Consumer operation] grab the min value in the stream
         :param key: (element -> C extends comparable) optional evaluator to compare elements
