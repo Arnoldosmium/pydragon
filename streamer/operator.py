@@ -43,6 +43,24 @@ class Deduplicator(Generic[T]):
         return self
 
 
+class Inserter(Generic[T]):
+
+    def __init__(self, stream: Iterator[T], delimiter: T):
+        self.__stream = stream
+        self.__delim = delimiter
+        self.__turn = 0
+
+    def __next__(self) -> T:
+        self.__turn = (self.__turn + 1) % 2
+        if self.__turn == 1:
+            return next(self.__stream)
+        else:
+            return self.__delim
+
+    def __iter__(self) -> Iterator[T]:
+        return self
+
+
 def RepeatApply(init, transform: Callable):
     p = init
     while True:

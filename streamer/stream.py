@@ -11,7 +11,7 @@ from itertools import chain, islice, dropwhile, takewhile, starmap
 from functools import reduce
 from typing import Callable, Union, List, Set, Iterator, Iterable, TypeVar, Generic, Dict, Tuple, Any
 from .util import to_iterator
-from .operator import Deduplicator
+from .operator import Deduplicator, Inserter
 from .collector import Collector, CountCollector
 
 T = TypeVar('T')
@@ -393,6 +393,14 @@ class Stream(Generic[T]):
         if key is None:
             return min(self)
         return min(self, key=key)
+
+    def intersperse(self, delimiter: T):
+        """
+        A new stream in which the delimiter is inserted in between every adjacent elements.
+        :param delimiter: same kind of existing elements
+        :return: a new stream
+        """
+        return Stream(Inserter(self, delimiter))
 
     def stream_transform(self, stream_func: Callable[[Iterator[T]], Iterator[R]]):
         """
