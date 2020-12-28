@@ -307,13 +307,16 @@ class Stream(Generic[T]):
     # Element removal Operations
     ###
 
-    def distinct(self):
+    def distinct(self, *, more_than: int = 1, key: Union[Callable[[T], Any], None] = None):
         """
         Gives stream with distinct elements
+        :param: more_than - only show elements that appear at least this number of times; at least 1
+        :param: key - apply this function to the element for de-duplicating; \
+            only first of the elements have same key will be preserved.
         :return: stream with distinct elements
         TODO: stream distinct condition marker
         """
-        return Stream(Deduplicator(self.__stream))
+        return Stream(Deduplicator(self.__stream, more_than=more_than, key=key))
 
     def limit(self, num: int):
         """

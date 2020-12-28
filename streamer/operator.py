@@ -7,21 +7,36 @@ streamer.operator
 The module contains some iterator operator - add operation to an iterator and keep its laziness.
 """
 
-from typing import Generic, TypeVar, Iterator, Callable
+from typing import Generic, TypeVar, Iterator, Callable, Union, Any
+from collections import Counter
 
 T = TypeVar('T')
 
 
 class Deduplicator(Generic[T]):
-    def __init__(self, stream: Iterator[T]):
-        self.__appeared = set()
+
+    def __init__(self, stream: Iterator[T], *, more_than: int = 1, key: Union[Callable[[T], Any], None] = None):
+        self.__appeared = Counter()
         self.__stream = stream
+        self.__more_than = more_than if more_than >= 1 else 1
+        self.__key = key
+
+    def _apply_key(self, elem: T):
+        if self.__key is None:
+            return elem
+        return self.__key(elem)
 
     def __next__(self) -> T:
         item = next(self.__stream)
-        while item in self.__appeared:
+        key = self._apply_key(item)
+        self.__appeared[key] += 1
+
+        # We only need to yield this element / key exactly when it appears required time.
+        while self.__appeared[key] != self.__more_than:
             item = next(self.__stream)
-        self.__appeared.add(item)
+            key = self._apply_key(item)
+            self.__appeared[key] += 1
+
         return item
 
     def __iter__(self) -> Iterator[T]:
@@ -33,3 +48,9 @@ def RepeatApply(init, transform: Callable):
     while True:
         yield p
         p = transform(p)
+
+
+def ContantOf(constant, repeat: int):
+    assert repeat > 0, "At least repeat 1 time."
+    for i in range(repeat):
+        yield constant
