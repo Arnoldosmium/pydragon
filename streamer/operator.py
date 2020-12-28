@@ -49,11 +49,16 @@ class Inserter(Generic[T]):
         self.__stream = stream
         self.__delim = delimiter
         self.__turn = 0
+        self.__elem = None
 
     def __next__(self) -> T:
-        self.__turn = (self.__turn + 1) % 2
-        if self.__turn == 1:
-            return next(self.__stream)
+        if self.__elem is None:
+            self.__elem = next(self.__stream)
+
+        self.__turn += 1
+        if self.__turn & 1:
+            nxt, self.__elem = self.__elem, None
+            return nxt
         else:
             return self.__delim
 

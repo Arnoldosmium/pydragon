@@ -60,7 +60,7 @@ def test_distinct():
     assert Stream("ddabbbcaca").distinct(more_than=3).collect("".join) == "ba"
     assert Stream(range(9, 1, -1)) \
         .distinct(key=lambda x: x % 2) \
-        .collect_as_set() == set(9, 8)
+        .collect_as_set() == {9, 8}
 
 
 def test_skip():

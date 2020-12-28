@@ -147,7 +147,7 @@ class Stream(Generic[T]):
         :param exclusion: items to exclude
         :return: New stream with exclusion filtered
         """
-        all_exclusions = set(T)
+        all_exclusions = set(exclusion)
         return Stream(elem for elem in self.__stream if elem not in all_exclusions)
 
     def peek(self, func: Callable[[T], None], raise_on_error: bool = False):
@@ -233,12 +233,12 @@ class Stream(Generic[T]):
         else:
             return reduce(reducer, self.__stream)
 
-    def reduce_right(self, reducer: Callable[[R, T], R], initial_value: Union[R, None] = None):
+    def reduce_right(self, reducer: Callable[[R, T], R], initial_value: Union[R, None] = None) -> R:
         """
         [Consumer operation] equivalent to functool reduce. Passes the stream in reverse order to reducer
-        :param reducer: (T extends any, element -> T) function takes each item and produce an (aggregated) value
-        :param initial_value: (T) optional value, served as the starting value.
-        :return: the result after reducing the stream
+        :param reducer: (R result, T element -> T) function takes each item and produce an (aggregated) value
+        :param initial_value: (R) optional value, served as the starting value.
+        :return: R - the result after reducing the stream
         """
         reversed_seq = list(self.__stream)[::-1]
         if initial_value is not None:
@@ -403,7 +403,7 @@ class Stream(Generic[T]):
     # Advanced operations
     ###
 
-    def max(self, key: Union[Callable[[T], Any], None]=None):
+    def max(self, key: Union[Callable[[T], Any], None] = None):
         """
         [Consumer operation] grab the max value in the stream
         :param key: (element -> C extends comparable) optional evaluator to compare elements
@@ -413,7 +413,7 @@ class Stream(Generic[T]):
             return max(self)
         return max(self, key=key)
 
-    def min(self, key: Union[Callable[[T], Any], None]=None):
+    def min(self, key: Union[Callable[[T], Any], None] = None):
         """
         [Consumer operation] grab the min value in the stream
         :param key: (element -> C extends comparable) optional evaluator to compare elements
