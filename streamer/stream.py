@@ -134,6 +134,22 @@ class Stream(Generic[T]):
         """
         return self.exclude(func)
 
+    def not_none(self):
+        """
+        Filter out elements that are `None`s
+        :return: New stream without None
+        """
+        return self.exclude(lambda x: x is None)
+
+    def without(self, *exclusion: T):
+        """
+        Filter out elements that are in exclusion list
+        :param exclusion: items to exclude
+        :return: New stream with exclusion filtered
+        """
+        all_exclusions = set(T)
+        return Stream(elem for elem in self.__stream if elem not in all_exclusions)
+
     def peek(self, func: Callable[[T], None], raise_on_error: bool = False):
         """
         Run function on the first element without altering or consuming it.
