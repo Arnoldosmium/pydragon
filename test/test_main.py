@@ -217,3 +217,27 @@ def test_pair_up():
     s = set()
     Stream(range(10)).for_pairs(s.add)
     assert s == {(x, x + 1) for x in range(9)}
+
+    assert Stream([]).map_pairs(lambda p: p).collect_as_set() == set()
+    assert Stream('1').map_pairs(lambda p: p).collect_as_set() == set()
+
+
+def test_zip():
+    assert Stream(range(10)) \
+        .zip_with(range(2), range(5)) \
+        .collect_as_list() == list(zip(range(10), range(2), range(5)))
+
+    assert Stream(range(10)) \
+        .zip_with(range(2), range(5), fill_none=True) \
+        .collect_as_list() == [(i, i if i < 2 else None, i if i < 5 else None) for i in range(10)]
+
+    assert Stream([None for _ in range(5)]) \
+        .zip_with(range(2), fill_none=True) \
+        .collect_as_list() == [(None, i if i < 2 else None) for i in range(5)]
+
+    assert Stream(range(10)) \
+        .zip_with([]) \
+        .collect_as_set() == set()
+
+    s = Stream(range(10))
+    assert s.zip_with() == s

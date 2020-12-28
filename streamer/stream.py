@@ -11,12 +11,15 @@ from itertools import chain, islice, dropwhile, takewhile, starmap
 from functools import reduce
 from typing import Callable, Union, List, Set, Iterator, Iterable, TypeVar, Generic, Dict, Tuple, Any
 from .util import to_iterator
-from .operator import Deduplicator, Inserter, PairUp
+from .operator import Deduplicator, Inserter, PairUp, Zipper
 from .collector import Collector, CountCollector
 
 T = TypeVar('T')
 R = TypeVar('R')
 ElementOrIter = Union[Iterable[T], Iterator[T], T]
+
+K = TypeVar('K')
+V = TypeVar('V')
 
 
 class Stream(Generic[T]):
@@ -467,6 +470,29 @@ class Stream(Generic[T]):
         """
         return Stream(func(pair) for pair in PairUp(self.__stream))
 
+    def map_to_entry(self, to_entry: Callable[[T], Tuple[K, V]]):
+        """
+        create an dict stream, entries of which are created by applying `to_entry` to existing element.
+        :param to_entry: function to create K, V tuple pair from existing elements
+        :return: DictStream
+        """
+        return DictStream(wrap=map(to_entry, self.__stream))
+
+    def map_to_key_value(self, to_key: Callable[[T], K], to_val: Callable[[T], V]):
+        """
+        create an dict stream, entries of which are key-value pairs by applying `to_key` `to_val` to existing element,
+        respectively.
+        :param to_key: function to create key from existing elements
+        :param to_val: function to create val from existing elements
+        :return: DictStream
+        """
+        return DictStream(wrap=((to_key(elem), to_val(elem)) for elem in self.__stream))
+
+    def zip_with(self, *streams: Iterator[R], fill_none: bool = False):
+        if len(streams) == 0:
+            return self
+        return Stream(Zipper(self.__stream, *streams, fill_none=fill_none))
+
     def stream_transform(self, stream_func: Callable[[Iterator[T]], Iterator[R]]):
         """
         Run arbitrary stream transformation
@@ -481,11 +507,9 @@ class Stream(Generic[T]):
         element tuple.
         :return: DictStream
         """
+        if isinstance(self, DictStream):
+            return self
         return DictStream(wrap=((elem[0], elem[1] if len(elem) == 2 else elem[1:]) for elem in self.__stream))
-
-
-K = TypeVar('K')
-V = TypeVar('V')
 
 
 class DictStream(Stream[Tuple[K, V]]):
