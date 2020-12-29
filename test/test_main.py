@@ -267,3 +267,13 @@ def test_combiner():
         .map(lambda x: None if x % 3 else x) \
         .collapse_to_first(lambda _, y: y is None) \
         .collect_as_list() == [x for x in range(10) if x % 3 == 0]
+
+    assert Stream(range(10)) \
+        .adjacent_groups(lambda x, y: (x - 5) * (y - 5) > 0) \
+        .collect_as_list() == [[0, 1, 2, 3, 4], [5], [6, 7, 8, 9]]
+
+    assert Stream(range(10)) \
+        .adjacent_key_groups(lambda x: x < 5) \
+        .collect_dict() == {
+            True: [0, 1, 2, 3, 4],
+            False: [5, 6, 7, 8, 9]}

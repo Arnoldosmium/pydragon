@@ -166,7 +166,6 @@ class Collapser(_AbstractOperator[T]):
             finally:
                 self.__prev = curr
 
-        print(self.__prev, elements)
         return self._process_collection(elements)
 
 
