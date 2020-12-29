@@ -277,3 +277,11 @@ def test_combiner():
         .collect_dict() == {
             True: [0, 1, 2, 3, 4],
             False: [5, 6, 7, 8, 9]}
+
+
+def test_grouper():
+    assert Stream(range(10)) \
+        .group_to_map(lambda x: x % 2) == {0: list(range(0, 10, 2)), 1: list(range(1, 10, 2))}
+    assert Stream([None] * 3) \
+        .group_to_map(lambda x: x is None) == {True: [None] * 3}
+    assert Stream([]).group_to_map(lambda x: x) == {}

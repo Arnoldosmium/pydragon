@@ -8,12 +8,14 @@ The module contains some iterator operator - add operation to an iterator and ke
 """
 
 from typing import Generic, TypeVar, Iterator, Iterable, Callable, Union, Any, Tuple
-from collections import Counter, namedtuple
+from collections import Counter, namedtuple, defaultdict
 from functools import reduce
 from abc import ABCMeta, abstractmethod
 from .collector import Collector
 
 T = TypeVar('T')
+K = TypeVar('K')
+V = TypeVar('V')
 
 _EmptyReference = namedtuple("_EmptyReference", "")()
 
@@ -167,6 +169,20 @@ class Collapser(_AbstractOperator[T]):
                 self.__prev = curr
 
         return self._process_collection(elements)
+
+
+def Grouper(stream: Iterator[Tuple[K, V]]):
+    """
+    An iterator as stream operator for grouping-by elements to a list according to its key
+    """
+    # Thanks to python generator, the expensive overhead / stream consumption will be deferred until request of first
+    # element.
+    collect_by_key = defaultdict(list)
+    for key, value in stream:
+        collect_by_key[key].append(value)
+
+    for key_value_tuple in collect_by_key.items():
+        yield key_value_tuple
 
 
 def RepeatApply(init, transform: Callable):

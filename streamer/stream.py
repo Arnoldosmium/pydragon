@@ -11,7 +11,7 @@ from itertools import chain, islice, dropwhile, takewhile, starmap
 from functools import reduce
 from typing import Callable, Union, List, Set, Iterator, Iterable, TypeVar, Generic, Dict, Tuple, Any
 from .util import to_iterator
-from .operator import Deduplicator, Inserter, PairUp, Zipper, Collapser
+from .operator import Deduplicator, Inserter, PairUp, Zipper, Collapser, Grouper
 from .collector import Collector, CountCollector
 
 T = TypeVar('T')
@@ -567,6 +567,26 @@ class Stream(Generic[T]):
             self.__stream,
             collapsible=lambda x, y: group_key_of(x) == group_key_of(y),
             collector=Collector.of(lambda l: (group_key_of(l[0]), l))))
+
+    def group_by(self, key: Callable[[T], K]):
+        """
+        Creates a stream of map entries, keys of which are the result by applying `key` on all elements, and values of
+        which are the list of elements that result in the same key.
+        :param key: key generating function
+        :return: stream of map entries
+        """
+        return DictStream(wrap=Grouper(self.map_to_key_value(key, lambda item: item)))
+
+    def group_to_map(
+            self, key: Callable[[T], K], *, map_collector: Callable[[Iterator[Tuple]], Dict] = dict) -> Dict[K, List[T]]:
+        """
+        Creates a map, keys of which are the result by applying `key` on all elements, and values of which are
+        the list of elements that result in the same key.
+        :param key: key generating function
+        :param map_collector: transforming entry stream to a dict
+        :return: dict
+        """
+        return self.group_by(key).collect_as_map(map_collector=map_collector)
 
     def stream_transform(self, stream_func: Callable[[Iterator[T]], Iterator[R]]):
         """
