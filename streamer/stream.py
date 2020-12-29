@@ -280,6 +280,29 @@ class Stream(Generic[T]):
                 return True
         return False
 
+    def has_all(self, *candidate: T) -> bool:
+        """
+        [Terminal operation] test if all candidates exist in the stream
+        :param candidate: candidates to check
+        :return: test result
+        """
+        candidates = set(candidate)
+        for item in self.__stream:
+            if item in candidates:
+                candidates.remove(item)
+            if len(candidates) == 0:
+                return True
+        return False
+
+    def has_any(self, *candidate: T) -> bool:
+        """
+        [Terminal operation] test if at least one of the candidates exist in the stream
+        :param candidate: candidates to check
+        :return: test result
+        """
+        candidates = set(candidate)
+        return self.any_match(lambda item: item in candidates)
+
     def all_match(self, match: Callable[[T], bool]) -> bool:
         """
         [Terminal operation] test if all elements in the stream pass the predicate test
