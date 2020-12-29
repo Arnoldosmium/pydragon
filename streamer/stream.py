@@ -26,7 +26,7 @@ class Stream(Generic[T]):
     """
     The Stream class is the chainable wrapper class around any generators / iterators
     Generators and iterators are merged together, and the sequence is preserved - the same at creation time.
-    No evaluation will actually happen unless a Terminal operation is executed.
+    No evaluation will actually happen unless a terminal / near-terminal operation is executed.
     """
 
     @staticmethod
@@ -205,7 +205,7 @@ class Stream(Generic[T]):
 
     def collect_dict(self, dict_collector: Callable[[Iterator[T]], Dict] = dict):
         """
-        [Terminal operation] form a map/dict with the 1st element from each stream candidate as keys and rest as values
+        [Terminal operation] form a map/dict with the 1st element from each stream candidate as keys and rest as value
         :param dict_collector: (Stream<I extends map.entry> -> Dict<K, V>) function iterates through the stream
         :return: the result after piping stream to dict collector function
         """
@@ -503,8 +503,8 @@ class Stream(Generic[T]):
 
     def wrap_as_dict_stream(self):
         """
-        Try box up current stream as a dict stream. Use at your own risk if the stream content is not in a format of two
-        element tuple.
+        Try box up current stream as a dict stream. Use at your own risk if the stream content is not in a format of
+        two-element tuple.
         :return: DictStream
         """
         if isinstance(self, DictStream):
