@@ -11,7 +11,7 @@ from itertools import chain, islice, dropwhile, takewhile, starmap
 from functools import reduce
 from typing import Callable, Union, List, Set, Iterator, Iterable, TypeVar, Generic, Dict, Tuple, Any
 from .util import to_iterator
-from .operator import Deduplicator, Inserter, PairUp, Zipper
+from .operator import Deduplicator, Inserter, PairUp, Zipper, Collapser
 from .collector import Collector, CountCollector
 
 T = TypeVar('T')
@@ -309,8 +309,8 @@ class Stream(Generic[T]):
     def sorted(self, key: Union[Callable[[T], Any], None] = None, reverse: bool = False):
         """
         [Near terminal operation] effectively collects all element for comparison and sorting for a sorted stream
-        :param: key - optional comparison method
-        :param: reverse - if the order of sort should be reversed (decreasing order)
+        :param key: optional comparison method
+        :param reverse: if the order of sort should be reversed (decreasing order)
         :return: A sorted stream
         TODO: stream sort condition marker
         TODO: parallel implementation
@@ -320,7 +320,7 @@ class Stream(Generic[T]):
     def for_pairs(self, func: Callable[[Tuple[T, T]], None]) -> None:
         """
         [Terminal operation] apply function to every adjacent pair
-        :param: func - function applying on all adjacent pairs
+        :param func: function applying on all adjacent pairs
         """
         for pair in PairUp(self.__stream):
             func(pair)
@@ -354,8 +354,8 @@ class Stream(Generic[T]):
     def distinct(self, *, more_than: int = 1, key: Union[Callable[[T], Any], None] = None):
         """
         Gives stream with distinct elements
-        :param: more_than - only show elements that appear at least this number of times; at least 1
-        :param: key - apply this function to the element for de-duplicating; \
+        :param more_than - only show elements that appear at least this number of times; at least 1
+        :param key - apply this function to the element for de-duplicating; \
             only first of the elements have same key will be preserved.
         :return: stream with distinct elements
         TODO: stream distinct condition marker
@@ -446,7 +446,7 @@ class Stream(Generic[T]):
         """
         return Stream(Inserter(self, delimiter))
 
-    def cross(self, elements: Iterable[R]) -> Iterator[Tuple[T, R]]:
+    def cross(self, elements: Iterable[R]):
         """
         Creates a new stream contain every pair of values and the cross elements.
         :param elements: for cross product
@@ -455,7 +455,7 @@ class Stream(Generic[T]):
         frozen_elements = frozenset(elements)
         return Stream((item, elem) for item in self.__stream for elem in frozen_elements)
 
-    def cross_result_of(self, generate: Callable[[T], Iterator[R]]) -> Iterator[Tuple[T, R]]:
+    def cross_result_of(self, generate: Callable[[T], Iterator[R]]):
         """
         Creates a new stream contain every pair of values and the results of generate function.
         :param generate: generator function
@@ -466,7 +466,7 @@ class Stream(Generic[T]):
     def map_pairs(self, func: Callable[[Tuple[T, T]], R]):
         """
         map to new item on every adjacent pair
-        :param: func - mapping function applying on all adjacent pairs
+        :param func: mapping function applying on all adjacent pairs
         """
         return Stream(func(pair) for pair in PairUp(self.__stream))
 
@@ -492,6 +492,32 @@ class Stream(Generic[T]):
         if len(streams) == 0:
             return self
         return Stream(Zipper(self.__stream, *streams, fill_none=fill_none))
+
+    def collapse_to_first(self, collapsible: Callable[[T, T], bool]):
+        """
+        create an stream with only the leading elements of all consecutively collapsible element chains
+        :param collapsible: determine if a pair of adjacent elements is collapsible.
+        :return: stream with collapsed result
+        """
+        return Stream(Collapser(self.__stream, collapsible, collector=Collector.of(lambda l: l[0])))
+
+    def collapse_and_combine(self, collapsible: Callable[[T, T], bool], combiner: Callable[[T, T], T]):
+        """
+        create an stream with all consecutively collapsible element chains combined with `combiner`
+        :param collapsible: determine if a pair of adjacent elements is collapsible.
+        :param combiner: apply this rule to the final chain of collapsible elements
+        :return: stream with collapsed result
+        """
+        return Stream(Collapser(self.__stream, collapsible, combiner=combiner))
+
+    def collapse_and_collect(self, collapsible: Callable[[T, T], bool], collector: Collector):
+        """
+        create an stream with all consecutively collapsible element chains collected `collector`
+        :param collapsible: determine if a pair of adjacent elements is collapsible.
+        :param collector: apply this collector to the final chain of collapsible elements
+        :return: stream with collapsed result
+        """
+        return Stream(Collapser(self.__stream, collapsible, collector=collector))
 
     def stream_transform(self, stream_func: Callable[[Iterator[T]], Iterator[R]]):
         """
