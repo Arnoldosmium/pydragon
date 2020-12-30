@@ -67,8 +67,19 @@ def cartesian_power(power: int, collection: Collection) -> Stream[Tuple]:
 
 
 def lines_of(content: Union[TextIOBase, str]) -> Stream[str]:
+    """
+    A stream containing all lines from a text or a text buffer. New line chars are preserved.
+    :param content: text or text buffer
+    :return: stream of lines
+    """
     return Stream(cast_to_text_io(content))
 
 
 def split(content: Union[TextIOBase, str], regex: str) -> Stream[str]:
+    """
+    A stream containing all splits of a regex on a text or text buffer
+    :param content: text or text buffer
+    :param regex: string, regex to split source
+    :return: stream of split chunks
+    """
     return Stream(Splitter(cast_to_text_io(content), regex))
