@@ -6,10 +6,12 @@ streamer.streams
 
 The module contains many stream generators.
 """
-from typing import Iterable, TypeVar, Callable, Tuple, Collection
+from typing import Iterable, TypeVar, Callable, Tuple, Collection, Union
+from io import TextIOBase
+import re
 from .stream import Stream
-from .operator import Cartesian, ConstantOf, RepeatApply
-
+from .operator import Cartesian, ConstantOf, RepeatApply, Splitter
+from .util import cast_to_text_io
 
 T = TypeVar("T")
 
@@ -62,3 +64,11 @@ def cartesian_power(power: int, collection: Collection) -> Stream[Tuple]:
     if power <= 0:
         raise ValueError("Cartesian power number should be at least 1")
     return Stream(Cartesian(*(iter(collection) for _ in range(power))))
+
+
+def lines_of(content: Union[TextIOBase, str]) -> Stream[str]:
+    return Stream(cast_to_text_io(content))
+
+
+def split(content: Union[TextIOBase, str], regex: str) -> Stream[str]:
+    return Stream(Splitter(cast_to_text_io(content), regex))

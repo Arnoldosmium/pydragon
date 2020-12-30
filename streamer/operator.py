@@ -12,6 +12,8 @@ from typing import Generic, TypeVar, Iterator, Iterable, Callable, Union, Any, T
 from collections import Counter, namedtuple, defaultdict, deque
 from functools import reduce
 from abc import ABCMeta, abstractmethod
+import io
+import re
 from .collector import Collector
 
 T = TypeVar('T')
@@ -247,3 +249,23 @@ def Cartesian(*sources: Iterator):
 
         for t in generate_cartesian(rnd, 0):
             yield t
+
+
+def Splitter(source: io.TextIOBase, regex: str):
+    pattern = re.compile(regex)
+
+    buf = ""
+    while True:
+        new_read = source.read(io.DEFAULT_BUFFER_SIZE)
+        if len(new_read) == 0:
+            yield buf
+            return
+        buf += new_read
+
+        start = 0
+        for match in pattern.finditer(buf):
+            end = match.start()
+            yield buf[start:end]
+            start = match.end()
+
+        buf = buf[start:]
